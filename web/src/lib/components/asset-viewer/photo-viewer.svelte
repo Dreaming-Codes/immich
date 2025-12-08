@@ -30,12 +30,13 @@
     cursor: AssetCursor;
     element?: HTMLDivElement;
     sharedLink?: SharedLinkResponseDto;
+    transitionName?: string;
     onReady?: () => void;
     onError?: () => void;
     onSwipe?: (direction: 'left' | 'right') => void;
   }
 
-  let { cursor, element = $bindable(), sharedLink, onReady, onError, onSwipe }: Props = $props();
+  let { cursor, element = $bindable(), sharedLink, transitionName, onReady, onError, onSwipe }: Props = $props();
 
   const { slideshowState, slideshowLook } = slideshowStore;
   const asset = $derived(cursor.current);
@@ -212,6 +213,7 @@
     }}
     bind:imgRef={assetViewerManager.imgRef}
     bind:ref={adaptiveImage}
+    {transitionName}
   >
     {#snippet backdrop()}
       {#if blurredSlideshow}

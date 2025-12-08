@@ -1,12 +1,14 @@
 <script lang="ts">
   import { thumbhash } from '$lib/actions/thumbhash';
   import AlphaBackground from '$lib/components/AlphaBackground.svelte';
+  import Letterboxes from '$lib/components/asset-viewer/letterboxes.svelte';
   import BrokenAsset from '$lib/components/assets/broken-asset.svelte';
   import DelayedLoadingSpinner from '$lib/components/DelayedLoadingSpinner.svelte';
   import ImageLayer from '$lib/components/ImageLayer.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { getAssetUrls } from '$lib/utils';
   import { AdaptiveImageLoader, type QualityList } from '$lib/utils/adaptive-image-loader.svelte';
+  import { SlideshowLook, SlideshowState } from '$lib/stores/slideshow.store';
   import { scaleToCover, scaleToFit } from '$lib/utils/container-utils';
   import { getAltText } from '$lib/utils/thumbnail-util';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
@@ -21,6 +23,9 @@
       width: number;
       height: number;
     };
+    slideshowState?: SlideshowState;
+    slideshowLook?: SlideshowLook;
+    transitionName?: string | null | undefined;
     onUrlChange?: (url: string) => void;
     onImageReady?: () => void;
     onError?: () => void;
@@ -38,6 +43,9 @@
     sharedLink,
     objectFit = 'contain',
     container,
+    slideshowState = SlideshowState.None,
+    slideshowLook = SlideshowLook.Contain,
+    transitionName,
     onUrlChange,
     onImageReady,
     onError,
@@ -103,9 +111,13 @@
     return { width: 1, height: 1 };
   });
 
-  const { width, height, left, top } = $derived.by(() => {
+  const scaledDimensions = $derived.by(() => {
     const scaleFn = objectFit === 'cover' ? scaleToCover : scaleToFit;
-    const { width, height } = scaleFn(imageDimensions, container);
+    return scaleFn(imageDimensions, container);
+  });
+
+  const { width, height, left, top } = $derived.by(() => {
+    const { width, height } = scaledDimensions;
     return {
       width: width + 'px',
       height: height + 'px',
@@ -152,7 +164,24 @@
 <div class="relative h-full w-full overflow-hidden" bind:this={ref}>
   {@render backdrop?.()}
 
-  <div class="absolute" style:left style:top style:width style:height>
+  <Letterboxes
+    {transitionName}
+    {slideshowState}
+    {slideshowLook}
+    hasThumbhash={!!asset.thumbhash}
+    {scaledDimensions}
+    {container}
+  />
+
+  <div
+    class="absolute"
+    style:left
+    style:top
+    style:width
+    style:height
+    style:view-transition-name={transitionName}
+    data-transition-name={transitionName}
+  >
     {#if show.alphaBackground}
       <AlphaBackground />
     {/if}

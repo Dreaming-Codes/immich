@@ -13,7 +13,7 @@
   import { t } from 'svelte-i18n';
 
   interface Props {
-    htmlElement: HTMLImageElement | HTMLVideoElement;
+    htmlElement: HTMLImageElement | HTMLVideoElement | undefined | null;
     containerWidth: number;
     containerHeight: number;
     assetId: string;
@@ -82,6 +82,9 @@
   });
 
   const imageContentMetrics = $derived.by(() => {
+    if (!htmlElement) {
+      return { contentWidth: 0, contentHeight: 0, offsetX: 0, offsetY: 0 };
+    }
     const natural = getNaturalSize(htmlElement);
     const container = { width: containerWidth, height: containerHeight };
     const { width: contentWidth, height: contentHeight } = scaleToFit(natural, container);
