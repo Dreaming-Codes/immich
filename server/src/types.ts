@@ -1,18 +1,19 @@
 import { SystemConfig } from 'src/config';
 import { VECTOR_EXTENSIONS } from 'src/constants';
-import { Asset, AssetFile } from 'src/database';
+import { AssetFile } from 'src/database';
 import { UploadFieldName } from 'src/dtos/asset-media.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { AssetEditActionItem } from 'src/dtos/editing.dto';
 import { SetMaintenanceModeDto } from 'src/dtos/maintenance.dto';
 import {
   AssetOrder,
+  AssetStatus,
   AssetType,
+  AssetVisibility,
   ExifOrientation,
   ImageFormat,
   JobName,
   MemoryType,
-  PluginTriggerType,
   QueueName,
   StorageFolder,
   SyncEntityType,
@@ -20,6 +21,8 @@ import {
   TranscodeTarget,
   UserMetadataKey,
   VideoCodec,
+  WorkflowTrigger,
+  WorkflowType,
 } from 'src/enum';
 
 export type DeepPartial<T> =
@@ -259,22 +262,105 @@ export interface INotifyAlbumUpdateJob extends IEntityJob, IDelayedJob {
   recipientId: string;
 }
 
-export interface WorkflowData {
-  [PluginTriggerType.AssetCreate]: {
-    userId: string;
-    asset: Asset;
+export type AssetV1 = {
+  asset: {
+    id: string;
+    ownerId: string;
+    type: AssetType;
+    originalPath: string;
+    fileCreatedAt: Date;
+    fileModifiedAt: Date;
+    isFavorite: boolean;
+    checksum: Buffer; // sha1 checksum
+    livePhotoVideoId: string | null;
+    updatedAt: Date;
+    createdAt: Date;
+    originalFileName: string;
+    isOffline: boolean;
+    libraryId: string | null;
+    isExternal: boolean;
+    deletedAt: Date | null;
+    localDateTime: Date;
+    stackId: string | null;
+    duplicateId: string | null;
+    status: AssetStatus;
+    visibility: AssetVisibility;
+    isEdited: boolean;
+    exifInfo: {
+      make: string | null;
+      model: string | null;
+      exifImageWidth: number | null;
+      exifImageHeight: number | null;
+      fileSizeInByte: number | null;
+      orientation: string | null;
+      dateTimeOriginal: Date | null;
+      modifyDate: Date | null;
+      lensModel: string | null;
+      fNumber: number | null;
+      focalLength: number | null;
+      iso: number | null;
+      latitude: number | null;
+      longitude: number | null;
+      city: string | null;
+      state: string | null;
+      country: string | null;
+      description: string | null;
+      fps: number | null;
+      exposureTime: string | null;
+      livePhotoCID: string | null;
+      timeZone: string | null;
+      projectionType: string | null;
+      profileDescription: string | null;
+      colorspace: string | null;
+      bitsPerSample: number | null;
+      autoStackId: string | null;
+      rating: number | null;
+      tags: string[] | null;
+      updatedAt: Date | null;
+    } | null;
   };
-  [PluginTriggerType.PersonRecognized]: {
-    personId: string;
-    assetId: string;
-  };
-}
+};
 
-export interface IWorkflowJob<T extends PluginTriggerType = PluginTriggerType> {
+export type AssetPersonV1 = AssetV1 & {
+  person: {
+    id: string;
+    name: string;
+  };
+};
+
+export type WorkflowEventMap = {
+  [WorkflowType.AssetV1]: AssetV1;
+  [WorkflowType.AssetPersonV1]: AssetPersonV1;
+};
+
+export type WorkflowEventData<T extends WorkflowType> = WorkflowEventMap[T];
+
+export type IWorkflowJob<T extends WorkflowType = WorkflowType> = {
   id: string;
+  trigger: WorkflowTrigger;
   type: T;
-  event: WorkflowData[T];
-}
+};
+
+export type WorkflowEventPayload<T extends WorkflowType = WorkflowType> = {
+  trigger: WorkflowTrigger;
+  type: T;
+  data: WorkflowEventData<T>;
+  config: WorkflowStepConfig;
+  workflow: {
+    id: string;
+    stepId: string;
+  };
+};
+
+export type WorkflowResponse<T extends WorkflowType = WorkflowType> = {
+  workflow?: {
+    /** stop the workflow */
+    continue?: boolean;
+  };
+  changes?: Partial<WorkflowEventData<T>>;
+  /** data to be passed to the next workflow step */
+  data?: Record<string, unknown>;
+};
 
 export interface JobCounts {
   active: number;
@@ -385,7 +471,7 @@ export type JobItem =
   | { name: JobName.Ocr; data: IEntityJob }
 
   // Workflow
-  | { name: JobName.WorkflowRun; data: IWorkflowJob }
+  | { name: JobName.WorkflowAssetCreate; data: { workflowId: string; assetId: string } }
 
   // Editor
   | { name: JobName.AssetEditThumbnailGeneration; data: IEntityJob };
@@ -548,3 +634,29 @@ export interface UserMetadata extends Record<UserMetadataKey, Record<string, any
   [UserMetadataKey.License]: { licenseKey: string; activationKey: string; activatedAt: string };
   [UserMetadataKey.Onboarding]: { isOnboarded: boolean };
 }
+
+export type JSONSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object';
+
+export type JSONSchemaProperty = {
+  type: 'object';
+  description?: string;
+  default?: any;
+  enum?: string[];
+  array?: boolean;
+  properties?: Record<string, JSONSchemaProperty>;
+  required?: string[];
+};
+
+export interface JSONSchema {
+  type: 'object';
+  properties?: Record<string, JSONSchemaProperty>;
+  required?: string[];
+  additionalProperties?: boolean;
+  description?: string;
+}
+
+export type ConfigValue = string | number | boolean | null | ConfigValue[] | { [key: string]: ConfigValue };
+
+export type WorkflowStepConfig = {
+  [key: string]: ConfigValue;
+};
