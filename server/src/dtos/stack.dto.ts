@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ArrayMinSize } from 'class-validator';
 import { Stack } from 'src/database';
-import { AssetResponseDto, mapAsset } from 'src/dtos/asset-response.dto';
+import { AssetResponseDto, hydrateAsset, mapAsset } from 'src/dtos/asset-response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { ValidateUUID } from 'src/validation';
 
@@ -37,6 +37,6 @@ export const mapStack = (stack: Stack, { auth }: { auth?: AuthDto }) => {
   return {
     id: stack.id,
     primaryAssetId: stack.primaryAssetId,
-    assets: [...primary, ...others].map((asset) => mapAsset(asset, { auth })),
+    assets: [...primary, ...others].map((asset) => mapAsset(hydrateAsset(asset), { auth })),
   };
 };

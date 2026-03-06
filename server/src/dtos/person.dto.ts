@@ -266,6 +266,14 @@ export function mapFaces(
 ): AssetFaceResponseDto {
   return {
     ...mapFacesWithoutPerson(face, edits, assetDimensions),
-    person: face.person?.ownerId === auth.user.id ? mapPerson(face.person) : null,
+    person:
+      face.person?.ownerId === auth.user.id
+        ? mapPerson({
+            ...face.person,
+            birthDate: face.person.birthDate ? new Date(face.person.birthDate) : null,
+            createdAt: new Date(face.person.createdAt),
+            updatedAt: new Date(face.person.updatedAt),
+          })
+        : null,
   };
 }

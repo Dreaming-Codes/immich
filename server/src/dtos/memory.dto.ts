@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { IsInt, IsObject, IsPositive, ValidateNested } from 'class-validator';
 import { Memory } from 'src/database';
 import { HistoryBuilder } from 'src/decorators';
-import { AssetResponseDto, mapAsset } from 'src/dtos/asset-response.dto';
+import { AssetResponseDto, hydrateAsset, mapAsset } from 'src/dtos/asset-response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { AssetOrderWithRandom, MemoryType } from 'src/enum';
 import { Optional, ValidateBoolean, ValidateDate, ValidateEnum, ValidateUUID } from 'src/validation';
@@ -146,6 +146,6 @@ export const mapMemory = (entity: Memory, auth: AuthDto): MemoryResponseDto => {
     type: entity.type as MemoryType,
     data: entity.data as unknown as MemoryData,
     isSaved: entity.isSaved,
-    assets: ('assets' in entity ? entity.assets : []).map((asset) => mapAsset(asset, { auth })),
+    assets: ('assets' in entity ? entity.assets : []).map((asset) => mapAsset(hydrateAsset(asset), { auth })),
   };
 };

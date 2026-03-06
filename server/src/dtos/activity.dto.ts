@@ -79,6 +79,6 @@ export const mapActivity = (activity: Activity): ActivityResponseDto => {
     createdAt: activity.createdAt,
     comment: activity.comment,
     type: activity.isLiked ? ReactionType.LIKE : ReactionType.COMMENT,
-    user: mapUser(activity.user),
+    user: mapUser({ ...activity.user, profileChangedAt: new Date(activity.user.profileChangedAt) }),
   };
 };

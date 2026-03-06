@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
 import { OnJob } from 'src/decorators';
 import { BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
-import { mapAsset } from 'src/dtos/asset-response.dto';
+import { hydrateAsset, mapAsset } from 'src/dtos/asset-response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { DuplicateResponseDto } from 'src/dtos/duplicate.dto';
 import { AssetVisibility, JobName, JobStatus, QueueName } from 'src/enum';
@@ -17,7 +17,7 @@ export class DuplicateService extends BaseService {
     const duplicates = await this.duplicateRepository.getAll(auth.user.id);
     return duplicates.map(({ duplicateId, assets }) => ({
       duplicateId,
-      assets: assets.map((asset) => mapAsset(asset, { auth })),
+      assets: assets.map((asset) => mapAsset(hydrateAsset(asset), { auth })),
     }));
   }
 

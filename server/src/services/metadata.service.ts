@@ -8,7 +8,7 @@ import { constants } from 'node:fs/promises';
 import { join, parse } from 'node:path';
 import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
 import { StorageCore } from 'src/cores/storage.core';
-import { Asset, AssetFace, AssetFile } from 'src/database';
+import { Asset, AssetFile } from 'src/database';
 import { OnEvent, OnJob } from 'src/decorators';
 import {
   AssetFileType,
@@ -829,7 +829,7 @@ export class MetadataService extends BaseService {
   }
 
   private async applyTaggedFaces(
-    asset: { id: string; ownerId: string; faces: AssetFace[]; originalPath: string },
+    asset: { id: string; ownerId: string; faces: { id: string; sourceType: SourceType }[]; originalPath: string },
     tags: ImmichTags,
   ) {
     if (!tags.RegionInfo?.AppliedToDimensions || tags.RegionInfo.RegionList.length === 0) {

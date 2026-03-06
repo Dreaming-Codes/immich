@@ -163,8 +163,29 @@ export function mapSharedLink(sharedLink: SharedLink, options: { stripAssetMetad
     type: sharedLink.type,
     createdAt: sharedLink.createdAt,
     expiresAt: sharedLink.expiresAt,
-    assets: assets.map((asset) => mapAsset(asset, { stripMetadata: options.stripAssetMetadata })),
-    album: sharedLink.album ? mapAlbumWithoutAssets(sharedLink.album) : undefined,
+    assets: assets.map((asset) =>
+      mapAsset(
+        {
+          ...asset,
+          checksum: Buffer.from(asset.checksum),
+          createdAt: new Date(asset.createdAt),
+          deletedAt: asset.deletedAt ? new Date(asset.deletedAt) : null,
+          localDateTime: new Date(asset.localDateTime),
+          fileCreatedAt: new Date(asset.fileCreatedAt),
+          fileModifiedAt: new Date(asset.fileModifiedAt),
+          thumbhash: asset.thumbhash ? Buffer.from(asset.thumbhash) : null,
+          updatedAt: new Date(asset.updatedAt),
+        },
+        { stripMetadata: options.stripAssetMetadata },
+      ),
+    ),
+    album: sharedLink.album
+      ? mapAlbumWithoutAssets({
+          ...sharedLink.album,
+          createdAt: new Date(sharedLink.album.createdAt),
+          updatedAt: new Date(sharedLink.album.updatedAt),
+        })
+      : undefined,
     allowUpload: sharedLink.allowUpload,
     allowDownload: sharedLink.allowDownload,
     showMetadata: sharedLink.showExif,

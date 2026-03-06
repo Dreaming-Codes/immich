@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Kysely, sql } from 'kysely';
-import { jsonArrayFrom } from 'kysely/helpers/postgres';
+import { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
 import { InjectKysely } from 'nestjs-kysely';
 import { columns } from 'src/database';
 import { DummyValue, GenerateSql } from 'src/decorators';
@@ -9,7 +9,6 @@ import { DB } from 'src/schema';
 import {
   anyUuid,
   asUuid,
-  toJson,
   withDefaultVisibility,
   withEdits,
   withExif,
@@ -296,7 +295,11 @@ export class AssetJobRepository {
             .as('stack_result'),
         (join) => join.onTrue(),
       )
-      .select((eb) => toJson(eb, 'stack_result').as('stack'))
+      .select((eb) =>
+        jsonObjectFrom(eb.table('stack_result'))
+          .$castTo<{ id: string; primaryAssetId: string; assets: { id: string }[] } | null>()
+          .as('stack'),
+      )
       .where('asset.id', '=', id)
       .executeTakeFirst();
   }

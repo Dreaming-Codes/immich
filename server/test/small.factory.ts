@@ -1,19 +1,17 @@
+import { ShallowDehydrateObject } from 'kysely';
 import {
   Activity,
   Album,
   ApiKey,
-  AssetFace,
   AssetFile,
   AuthApiKey,
   AuthSharedLink,
   AuthUser,
   Exif,
   Library,
-  Memory,
   Partner,
   Person,
   Session,
-  Stack,
   Tag,
   User,
   UserAdmin,
@@ -28,13 +26,12 @@ import {
   AssetStatus,
   AssetType,
   AssetVisibility,
-  MemoryType,
   Permission,
-  SourceType,
   UserMetadataKey,
   UserStatus,
 } from 'src/enum';
-import { DeepPartial, OnThisDayData, UserMetadataItem } from 'src/types';
+import { DeepPartial, UserMetadataItem } from 'src/types';
+import { UserFactory } from 'test/factories/user.factory';
 import { v4, v7 } from 'uuid';
 
 export const newUuid = () => v4();
@@ -123,9 +120,17 @@ const authUserFactory = (authUser: Partial<AuthUser> = {}) => {
   return { id, isAdmin, name, email, quotaUsageInBytes, quotaSizeInBytes };
 };
 
-const partnerFactory = (partner: Partial<Partner> = {}) => {
-  const sharedBy = userFactory(partner.sharedBy || {});
-  const sharedWith = userFactory(partner.sharedWith || {});
+const partnerFactory = ({
+  sharedBy: sharedByProvided,
+  sharedWith: sharedWithProvided,
+  ...partner
+}: Partial<Partner> = {}) => {
+  const hydrateUser = (user: Partial<ShallowDehydrateObject<User>>) => ({
+    ...user,
+    profileChangedAt: user.profileChangedAt ? new Date(user.profileChangedAt) : undefined,
+  });
+  const sharedBy = UserFactory.create(sharedByProvided ? hydrateUser(sharedByProvided) : {});
+  const sharedWith = UserFactory.create(sharedWithProvided ? hydrateUser(sharedWithProvided) : {});
 
   return {
     sharedById: sharedBy.id,
@@ -167,19 +172,6 @@ const queueStatisticsFactory = (dto?: Partial<QueueStatisticsDto>) => ({
   paused: 0,
   ...dto,
 });
-
-const stackFactory = ({ owner, assets, ...stack }: DeepPartial<Stack> = {}): Stack => {
-  const ownerId = newUuid();
-
-  return {
-    id: newUuid(),
-    primaryAssetId: assets?.[0].id ?? newUuid(),
-    ownerId,
-    owner: userFactory(owner ?? { id: ownerId }),
-    assets: assets?.map((asset) => assetFactory(asset)) ?? [],
-    ...stack,
-  };
-};
 
 const userFactory = (user: Partial<User> = {}) => ({
   id: newUuid(),
@@ -276,14 +268,14 @@ const assetFactory = (
   };
 };
 
-const activityFactory = (activity: Partial<Activity> = {}) => {
+const activityFactory = (activity: Partial<Omit<Activity, 'user'>> = {}) => {
   const userId = activity.userId || newUuid();
   return {
     id: newUuid(),
     comment: null,
     isLiked: false,
     userId,
-    user: userFactory({ id: userId }),
+    user: UserFactory.create({ id: userId }),
     assetId: newUuid(),
     albumId: newUuid(),
     createdAt: newDate(),
@@ -317,24 +309,6 @@ const libraryFactory = (library: Partial<Library> = {}) => ({
   importPaths: [],
   exclusionPatterns: [],
   ...library,
-});
-
-const memoryFactory = (memory: Partial<Memory> = {}) => ({
-  id: newUuid(),
-  createdAt: newDate(),
-  updatedAt: newDate(),
-  updateId: newUuidV7(),
-  deletedAt: null,
-  ownerId: newUuid(),
-  type: MemoryType.OnThisDay,
-  data: { year: 2024 } as OnThisDayData,
-  isSaved: false,
-  memoryAt: newDate(),
-  seenAt: null,
-  showAt: newDate(),
-  hideAt: newDate(),
-  assets: [],
-  ...memory,
 });
 
 const versionHistoryFactory = () => ({
@@ -456,25 +430,6 @@ const tagFactory = (tag: Partial<Tag>): Tag => ({
   ...tag,
 });
 
-const faceFactory = ({ person, ...face }: DeepPartial<AssetFace> = {}): AssetFace => ({
-  assetId: newUuid(),
-  boundingBoxX1: 1,
-  boundingBoxX2: 2,
-  boundingBoxY1: 1,
-  boundingBoxY2: 2,
-  deletedAt: null,
-  id: newUuid(),
-  imageHeight: 420,
-  imageWidth: 42,
-  isVisible: true,
-  personId: null,
-  sourceType: SourceType.MachineLearning,
-  updatedAt: newDate(),
-  updateId: newUuidV7(),
-  person: person === null ? null : personFactory(person),
-  ...face,
-});
-
 const assetEditFactory = (edit?: Partial<AssetEditActionItem>): AssetEditActionItem => {
   switch (edit?.action) {
     case AssetEditAction.Crop: {
@@ -536,11 +491,9 @@ export const factory = {
   authApiKey: authApiKeyFactory,
   authUser: authUserFactory,
   library: libraryFactory,
-  memory: memoryFactory,
   partner: partnerFactory,
   queueStatistics: queueStatisticsFactory,
   session: sessionFactory,
-  stack: stackFactory,
   user: userFactory,
   userAdmin: userAdminFactory,
   versionHistory: versionHistoryFactory,
@@ -548,7 +501,6 @@ export const factory = {
     sidecarWrite: assetSidecarWriteFactory,
   },
   exif: exifFactory,
-  face: faceFactory,
   person: personFactory,
   assetEdit: assetEditFactory,
   tag: tagFactory,
