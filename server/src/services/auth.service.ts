@@ -1,5 +1,4 @@
 import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { isString } from 'class-validator';
 import { parse } from 'cookie';
 import { DateTime } from 'luxon';
 import { IncomingHttpHeaders } from 'node:http';
@@ -307,7 +306,7 @@ export class AuthService extends BaseService {
       const storageLabel = this.getClaim(profile, {
         key: storageLabelClaim,
         default: '',
-        isValid: isString,
+        isValid: (value: unknown): value is string => typeof value === 'string',
       });
       const storageQuota = this.getClaim(profile, {
         key: storageQuotaClaim,
@@ -317,7 +316,7 @@ export class AuthService extends BaseService {
       const role = this.getClaim<'admin' | 'user'>(profile, {
         key: roleClaim,
         default: 'user',
-        isValid: (value: unknown) => isString(value) && ['admin', 'user'].includes(value),
+        isValid: (value: unknown) => typeof value === 'string' && ['admin', 'user'].includes(value),
       });
 
       const userName = profile.name ?? `${profile.given_name || ''} ${profile.family_name || ''}`;
