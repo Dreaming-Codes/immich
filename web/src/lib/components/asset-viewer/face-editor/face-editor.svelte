@@ -4,6 +4,7 @@
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { getNaturalSize, scaleToFit } from '$lib/utils/container-utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { scaleFaceRectOnResize } from '$lib/utils/people-utils';
   import { createFace, getAllPeople, type PersonResponseDto } from '@immich/sdk';
   import { Button, Input, modalManager, toastManager } from '@immich/ui';
   import { Canvas, InteractiveFabricObject, Rect } from 'fabric';
@@ -31,6 +32,10 @@
 
   let searchTerm = $state('');
   let faceBoxPosition = $state({ left: 0, top: 0, width: 0, height: 0 });
+  let initialized = false;
+  let previousContentWidth = 0;
+  let previousOffsetX = 0;
+  let previousOffsetY = 0;
 
   let filteredCandidates = $derived(
     searchTerm
@@ -94,27 +99,47 @@
   });
 
   $effect(() => {
-    const { offsetX, offsetY } = imageContentMetrics;
+    const { offsetX, offsetY, contentWidth } = imageContentMetrics;
 
-    if (!canvas) {
+    if (!canvas || contentWidth === 0) {
       return;
     }
 
-    canvas.setDimensions({
-      width: containerWidth,
-      height: containerHeight,
-    });
+    if (!initialized) {
+      initialized = true;
+      canvas.setDimensions({ width: containerWidth, height: containerHeight });
 
-    if (!faceRect) {
+      if (faceRect) {
+        faceRect.set({ top: offsetY + 200, left: offsetX + 200 });
+        faceRect.setCoords();
+      }
+
+      previousContentWidth = contentWidth;
+      previousOffsetX = offsetX;
+      previousOffsetY = offsetY;
+      positionFaceSelector();
       return;
     }
 
-    faceRect.set({
-      top: offsetY + 200,
-      left: offsetX + 200,
-    });
+    canvas.setDimensions({ width: containerWidth, height: containerHeight });
 
-    faceRect.setCoords();
+    if (faceRect && previousContentWidth > 0) {
+      const scaled = scaleFaceRectOnResize(
+        { left: faceRect.left, top: faceRect.top, scaleX: faceRect.scaleX, scaleY: faceRect.scaleY },
+        { previousOffsetX, previousOffsetY, previousContentWidth },
+        offsetX,
+        offsetY,
+        contentWidth,
+      );
+      faceRect.set(scaled);
+      faceRect.setCoords();
+    }
+
+    previousContentWidth = contentWidth;
+    previousOffsetX = offsetX;
+    previousOffsetY = offsetY;
+
+    canvas.renderAll();
     positionFaceSelector();
   });
 

@@ -486,8 +486,6 @@
   class="fixed start-0 top-0 grid size-full grid-cols-4 grid-rows-[64px_1fr] overflow-hidden bg-black"
   use:focusTrap
   bind:this={assetViewerHtmlElement}
-  bind:clientWidth={containerWidth}
-  bind:clientHeight={containerHeight}
 >
   <!-- Top navigation bar -->
   {#if $slideshowState === SlideshowState.None && !assetViewerManager.isShowEditor}
@@ -529,7 +527,12 @@
   {/if}
 
   <!-- Asset Viewer -->
-  <div data-viewer-content class="z-[-1] relative col-start-1 col-span-4 row-start-1 row-span-full">
+  <div
+    data-viewer-content
+    class="z-[-1] relative col-start-1 col-span-4 row-start-1 row-span-full"
+    bind:clientWidth={containerWidth}
+    bind:clientHeight={containerHeight}
+  >
     {#if viewerKind === 'StackVideoViewer'}
       <VideoViewer
         asset={previewStackedAsset!}
