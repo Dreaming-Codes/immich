@@ -284,7 +284,11 @@ const createDefaultOwner = (ownerId: string) => {
  * Convert a TimelineAssetConfig to a full AssetResponseDto
  * This matches the response from GET /api/assets/:id
  */
-export function toAssetResponseDto(asset: MockTimelineAsset, owner?: UserResponseDto): AssetResponseDto {
+export function toAssetResponseDto(
+  asset: MockTimelineAsset,
+  owner?: UserResponseDto,
+  overrides?: Partial<Pick<AssetResponseDto, 'people' | 'unassignedFaces'>>,
+): AssetResponseDto {
   const now = new Date().toISOString();
 
   // Default owner if not provided
@@ -338,8 +342,8 @@ export function toAssetResponseDto(asset: MockTimelineAsset, owner?: UserRespons
     exifInfo,
     livePhotoVideoId: asset.livePhotoVideoId,
     tags: [],
-    people: [],
-    unassignedFaces: [],
+    people: overrides?.people ?? [],
+    unassignedFaces: overrides?.unassignedFaces ?? [],
     stack: asset.stack,
     isOffline: false,
     hasMetadata: true,

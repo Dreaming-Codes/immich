@@ -1,8 +1,8 @@
 <script lang="ts">
   import OnEvents from '$lib/components/OnEvents.svelte';
   import { timeBeforeShowLoadingSpinner } from '$lib/constants';
+  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { assetViewingStore } from '$lib/stores/asset-viewing.store';
   import { boundingBoxesArray } from '$lib/stores/people.store';
   import { getPeopleThumbnailUrl, handlePromiseError } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
@@ -25,7 +25,6 @@
   import { fly } from 'svelte/transition';
   import ImageThumbnail from '../assets/thumbnail/image-thumbnail.svelte';
   import AssignFaceSidePanel from './assign-face-side-panel.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
 
   interface Props {
     assetId: string;
@@ -179,7 +178,10 @@
 
       peopleWithFaces = peopleWithFaces.filter((f) => f.id !== face.id);
 
-      await assetViewingStore.setAssetId(assetId);
+      onRefresh();
+      if (peopleWithFaces.length === 0) {
+        onClose();
+      }
     } catch (error) {
       handleError(error, $t('error_delete_face'));
     }

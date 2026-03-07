@@ -145,28 +145,12 @@
       (quality.preview === 'success' ? previewElement : undefined) ??
       (quality.thumbnail === 'success' ? thumbnailElement : undefined);
   });
-
-  const zoomTransform = $derived.by(() => {
-    const { currentZoom, currentPositionX, currentPositionY } = assetViewerManager.zoomState;
-    if (currentZoom === 1 && currentPositionX === 0 && currentPositionY === 0) {
-      return undefined;
-    }
-    return `translate(${currentPositionX}px, ${currentPositionY}px) scale(${currentZoom})`;
-  });
 </script>
 
 <div class="relative h-full w-full overflow-hidden will-change-transform" bind:this={ref}>
   {@render backdrop?.()}
 
-  <div
-    class="absolute"
-    style:left
-    style:top
-    style:width
-    style:height
-    style:transform={zoomTransform}
-    style:transform-origin={zoomTransform ? '0 0' : undefined}
-  >
+  <div class="absolute" style:left style:top style:width style:height>
     {#if show.alphaBackground}
       <AlphaBackground />
     {/if}

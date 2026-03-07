@@ -20,13 +20,7 @@
   import { handleError } from '$lib/utils/handle-error';
   import { fromISODateTime, fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
   import { getParentPath } from '$lib/utils/tree-utils';
-  import {
-    AssetMediaSize,
-    getAllAlbums,
-    getAssetInfo,
-    type AlbumResponseDto,
-    type AssetResponseDto,
-  } from '@immich/sdk';
+  import { AssetMediaSize, getAllAlbums, type AlbumResponseDto, type AssetResponseDto } from '@immich/sdk';
   import { Icon, IconButton, LoadingSpinner, modalManager, Text } from '@immich/ui';
   import {
     mdiCalendar,
@@ -52,9 +46,10 @@
   interface Props {
     asset: AssetResponseDto;
     currentAlbum?: AlbumResponseDto | null;
+    onRefreshPeople?: () => Promise<void>;
   }
 
-  let { asset, currentAlbum = null }: Props = $props();
+  let { asset, currentAlbum = null, onRefreshPeople }: Props = $props();
 
   let showAssetPath = $state(false);
   let showEditFaces = $state(false);
@@ -118,11 +113,6 @@
     }
 
     return undefined;
-  };
-
-  const handleRefreshPeople = async () => {
-    asset = await getAssetInfo({ id: asset.id });
-    showEditFaces = false;
   };
 
   const getAssetFolderHref = (asset: AssetResponseDto) => {
@@ -575,6 +565,6 @@
     assetId={asset.id}
     assetType={asset.type}
     onClose={() => (showEditFaces = false)}
-    onRefresh={handleRefreshPeople}
+    onRefresh={() => void onRefreshPeople?.()}
   />
 {/if}

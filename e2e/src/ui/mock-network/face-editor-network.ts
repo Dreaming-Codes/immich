@@ -1,3 +1,9 @@
+import {
+  type AssetFaceResponseDto,
+  type AssetFaceWithoutPersonResponseDto,
+  type AssetResponseDto,
+  type PersonWithFacesResponseDto,
+} from '@immich/sdk';
 import { BrowserContext } from '@playwright/test';
 import { randomThumbnail } from 'src/ui/generators/timeline';
 
@@ -109,6 +115,120 @@ export const setupFaceEditorMockApiRoutes = async (
 
     return route.fulfill({
       status: 201,
+      contentType: 'text/plain',
+      body: 'OK',
+    });
+  });
+
+  await context.route('**/api/people/*/thumbnail', async (route) => {
+    if (!route.request().serviceWorker()) {
+      return route.continue();
+    }
+    return route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'image/jpeg' },
+      body: await randomThumbnail('person-thumb', 1),
+    });
+  });
+};
+
+export type MockFaceSpec = {
+  personId: string;
+  personName: string;
+  faceId: string;
+  boundingBoxX1: number;
+  boundingBoxY1: number;
+  boundingBoxX2: number;
+  boundingBoxY2: number;
+};
+
+export const createMockFaceData = (
+  faceSpecs: MockFaceSpec[],
+  imageWidth: number,
+  imageHeight: number,
+): { people: PersonWithFacesResponseDto[]; unassignedFaces: AssetFaceWithoutPersonResponseDto[] } => {
+  const people: PersonWithFacesResponseDto[] = faceSpecs.map((spec) => ({
+    id: spec.personId,
+    name: spec.personName,
+    birthDate: null,
+    isHidden: false,
+    thumbnailPath: `/upload/thumbs/${spec.personId}.jpeg`,
+    updatedAt: new Date().toISOString(),
+    faces: [
+      {
+        id: spec.faceId,
+        imageWidth,
+        imageHeight,
+        boundingBoxX1: spec.boundingBoxX1,
+        boundingBoxY1: spec.boundingBoxY1,
+        boundingBoxX2: spec.boundingBoxX2,
+        boundingBoxY2: spec.boundingBoxY2,
+      },
+    ],
+  }));
+
+  return { people, unassignedFaces: [] };
+};
+
+export const setupFaceOverlayMockApiRoutes = async (
+  context: BrowserContext,
+  assetDto: AssetResponseDto,
+  faceSpecs: MockFaceSpec[],
+) => {
+  const faceResponseMap = new Map<string, AssetFaceResponseDto>();
+  for (const spec of faceSpecs) {
+    faceResponseMap.set(spec.faceId, {
+      id: spec.faceId,
+      imageWidth: assetDto.width ?? 3000,
+      imageHeight: assetDto.height ?? 4000,
+      boundingBoxX1: spec.boundingBoxX1,
+      boundingBoxY1: spec.boundingBoxY1,
+      boundingBoxX2: spec.boundingBoxX2,
+      boundingBoxY2: spec.boundingBoxY2,
+      person: {
+        id: spec.personId,
+        name: spec.personName,
+        birthDate: null,
+        isHidden: false,
+        thumbnailPath: `/upload/thumbs/${spec.personId}.jpeg`,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  }
+
+  await context.route(`**/api/assets/${assetDto.id}`, async (route, request) => {
+    if (request.method() !== 'GET') {
+      return route.fallback();
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      json: assetDto,
+    });
+  });
+
+  await context.route(`**/api/faces?id=${assetDto.id}`, async (route, request) => {
+    if (request.method() !== 'GET') {
+      return route.fallback();
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      json: [...faceResponseMap.values()],
+    });
+  });
+
+  await context.route('**/api/faces/*', async (route, request) => {
+    if (request.method() !== 'DELETE') {
+      return route.fallback();
+    }
+    const url = new URL(request.url());
+    const faceId = url.pathname.split('/').at(-1);
+    if (faceId) {
+      faceResponseMap.delete(faceId);
+    }
+    return route.fulfill({
+      status: 200,
       contentType: 'text/plain',
       body: 'OK',
     });
