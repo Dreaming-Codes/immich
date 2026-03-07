@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(native_video_player)
 import native_video_player
+#endif
 
 let CLIENT_CERT_LABEL = "app.alextran.immich.client_identity"
 let HEADERS_KEY = "immich.request_headers"
@@ -14,7 +16,7 @@ extension UserDefaults {
 /// Old sessions are kept alive by Dart's FFI retain until all isolates release them.
 class URLSessionManager: NSObject {
   static let shared = URLSessionManager()
-  
+
   private(set) var session: URLSession
   let delegate: URLSessionManagerDelegate
   private static let cacheDir: URL = {
@@ -34,11 +36,11 @@ class URLSessionManager: NSObject {
     return "Immich_iOS_\(version)"
   }()
   static let cookieStorage = HTTPCookieStorage.sharedCookieStorage(forGroupContainerIdentifier: APP_GROUP)
-  
+
   var sessionPointer: UnsafeMutableRawPointer {
     Unmanaged.passUnretained(session).toOpaque()
   }
-  
+
   private override init() {
     delegate = URLSessionManagerDelegate()
     session = Self.buildSession(delegate: delegate)
@@ -49,7 +51,7 @@ class URLSessionManager: NSObject {
     session = Self.buildSession(delegate: delegate)
   }
 
-  private static func buildSession(delegate: URLSessionManagerDelegate) -> URLSession {
+  private static func buildSession(delegate: URLSessionDelegate? = nil) -> URLSession {
     let config = URLSessionConfiguration.default
     config.urlCache = urlCache
     config.httpCookieStorage = cookieStorage
@@ -73,7 +75,7 @@ class URLSessionManagerDelegate: NSObject, URLSessionTaskDelegate, URLSessionWeb
   ) {
     handleChallenge(session, challenge, completionHandler)
   }
-  
+
   func urlSession(
     _ session: URLSession,
     task: URLSessionTask,
@@ -82,7 +84,7 @@ class URLSessionManagerDelegate: NSObject, URLSessionTaskDelegate, URLSessionWeb
   ) {
     handleChallenge(session, challenge, completionHandler, task: task)
   }
-  
+
   func handleChallenge(
     _ session: URLSession,
     _ challenge: URLAuthenticationChallenge,
@@ -95,7 +97,7 @@ class URLSessionManagerDelegate: NSObject, URLSessionTaskDelegate, URLSessionWeb
     default: completionHandler(.performDefaultHandling, nil)
     }
   }
-  
+
   private func handleClientCertificate(
     _ session: URLSession,
     completion: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
@@ -105,21 +107,23 @@ class URLSessionManagerDelegate: NSObject, URLSessionTaskDelegate, URLSessionWeb
       kSecAttrLabel as String: CLIENT_CERT_LABEL,
       kSecReturnRef as String: true,
     ]
-    
+
     var item: CFTypeRef?
     let status = SecItemCopyMatching(query as CFDictionary, &item)
     if status == errSecSuccess, let identity = item {
       let credential = URLCredential(identity: identity as! SecIdentity,
                                      certificates: nil,
                                      persistence: .forSession)
+      #if canImport(native_video_player)
       if #available(iOS 15, *) {
         VideoProxyServer.shared.session = session
       }
+      #endif
       return completion(.useCredential, credential)
     }
     completion(.performDefaultHandling, nil)
   }
-  
+
   private func handleBasicAuth(
     _ session: URLSession,
     task: URLSessionTask?,
@@ -131,9 +135,11 @@ class URLSessionManagerDelegate: NSObject, URLSessionTaskDelegate, URLSessionWeb
     else {
       return completion(.performDefaultHandling, nil)
     }
+    #if canImport(native_video_player)
     if #available(iOS 15, *) {
       VideoProxyServer.shared.session = session
     }
+    #endif
     let credential = URLCredential(user: user, password: password, persistence: .forSession)
     completion(.useCredential, credential)
   }

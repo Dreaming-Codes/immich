@@ -46,7 +46,9 @@ object HttpClientManager {
   private var initialized = false
   private val clientChangedListeners = mutableListOf<() -> Unit>()
 
-  private lateinit var client: OkHttpClient
+  @JvmStatic
+  lateinit var client: OkHttpClient
+    private set
   private lateinit var appContext: Context
   private lateinit var prefs: SharedPreferences
 
@@ -59,6 +61,8 @@ object HttpClientManager {
     private set
 
   val isMtls: Boolean get() = keyChainAlias != null || keyStore.containsAlias(CERT_ALIAS)
+
+  val serverUrl: String? get() = if (initialized) prefs.getString(PREFS_SERVER_URL, null) else null
 
   fun initialize(context: Context) {
     if (initialized) return
@@ -136,11 +140,6 @@ object HttpClientManager {
   }
 
   private var clientGlobalRef: Long = 0L
-
-  @JvmStatic
-  fun getClient(): OkHttpClient {
-    return client
-  }
 
   fun getClientPointer(): Long {
     if (clientGlobalRef == 0L) {
